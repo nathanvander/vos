@@ -7,9 +7,12 @@ import apollo.util.DateYMD;
 * To create a new Add Matter Dialog, use a null String as the oid
 */
 public class MatterDialog extends Dialog implements ActionListener {
+			//20 rows
+			//we don't let you edit date_closed
+			Label l_key;	//_key;
 			TextComponent t1;	//mattername
 			TextComponent t2;
-			TextComponent t3;
+			TextComponent t_date_opened;
 			TextComponent t4;
 			TextComponent t5;
 			TextComponent t6;
@@ -19,9 +22,13 @@ public class MatterDialog extends Dialog implements ActionListener {
 			TextComponent t10;
 			TextComponent t11;
 			TextComponent t12;
-			TextComponent t13;
-			TextComponent t14;
-			Checkbox cb1;
+			TextComponent t13;	//otr_attry
+			TextComponent t_desc;
+			TextComponent t_parent;
+			TextComponent t_budget;
+			TextComponent t_rate;
+			TextComponent t_priority;
+			Choice c_status;
 
 			DataStore ds;
 			String oid;	 //the oid is a number in base-12, which is the matter id
@@ -29,11 +36,11 @@ public class MatterDialog extends Dialog implements ActionListener {
 			public MatterDialog(Frame f,DataStore ds,String oid) {
 				super(f,"Matter Dialog");
 				this.ds=ds;
-				this.setSize(350,500);
+				this.setSize(350,700);
 				addWindowListener(new DialogListener(this));
 				setLayout(new BorderLayout());
 
-				Panel top=new Panel(new GridLayout(15,2));
+				Panel top=new Panel(new GridLayout(21,2));
 				add(top,BorderLayout.NORTH);
 
 				Panel center=new Panel(new FlowLayout());
@@ -54,61 +61,129 @@ public class MatterDialog extends Dialog implements ActionListener {
 						m=(Matter)ds.get(k);
 					} catch (Exception x) {
 						System.out.println("WARNING: unable to get Matter data");
+						//need more detail. What is the problem?
+						x.printStackTrace();
 					}
 				}
 
+				//row 0
+				if (oid!=null) {
+					top.add(new Label("Key"));
+					l_key=new Label(oid);
+					top.add(l_key);
+				}
+
+				//row 1
 				top.add(new Label("Matter Name"));
 				t1 = new TextField(m.mattername, 20);
 				top.add(t1);
+
+				//row 2
 				top.add(new Label("Type (e.g. CR)"));
 				t2 = new TextField(m.type, 5);
 				top.add(t2);
+
+				//row 3
 				top.add(new Label("Date Opened (YYYY-MM-DD)"));
 				if (m.date_opened==null) {
 					m.date_opened=new DateYMD();
 				}
-				t3 = new TextField(m.date_opened.toString(), 12);
-				top.add(t3);
+				t_date_opened = new TextField(m.date_opened.toString(), 12);
+				top.add(t_date_opened);
+
+				//row 4
 				top.add(new Label("First Name"));
 				t4 = new TextField(m.firstname, 20);
 				top.add(t4);
+
+				//row 5
 				top.add(new Label("Last Name"));
 				t5 = new TextField(m.lastname, 20);
 				top.add(t5);
+
+				//row 6
 				top.add(new Label("Phone"));
 				t6 = new TextField(m.phone, 12);
 				top.add(t6);
+
+				//row 7
 				top.add(new Label("Email"));
 				t7 = new TextField(m.email, 20);
 				top.add(t7);
+
+				//row 8
 				top.add(new Label("Address 1"));
 				t8=new TextField(m.address1,20);
 				top.add(t8);
+
+				//row 9
 				top.add(new Label("Address 2 (City,State)"));
 				t9=new TextField(m.address2,20);
 				top.add(t9);
+
+				//row 10
 				top.add(new Label("Court"));
 				t10 = new TextField(m.court, 20);
 				top.add(t10);
+
+				//row 11
 				top.add(new Label("Case No"));
 				t11 = new TextField(m.casenum, 20);
 				top.add(t11);
+
+				//row 12
 				top.add(new Label("Other Party"));
 				t12 = new TextField(m.otr_party, 20);
 				top.add(t12);
+
+				//row 13
 				top.add(new Label("Other Attorney"));
 				t13 = new TextField(m.otr_atty, 20);
 				top.add(t13);
-				top.add(new Label("Open"));
-				if (oid==null) {
-					m.open=true;
-				}
-				cb1 = new Checkbox("open",m.open);
-				top.add(cb1);
 
+				//row 14 - notes, moved to the bottom
+				//row 15
+				top.add(new Label("Parent"));
+				t_parent=new TextField(m.parent,20);
+				top.add(t_parent);
+
+				//row 16
+				top.add(new Label("Budget (amount)"));
+				if (m.budget!=null) {
+					t_budget=new TextField(m.budget.toPlainString(),20);
+				} else {
+					t_budget=new TextField("0.00",20);
+				}
+				top.add(t_budget);
+
+				//row 17
+				top.add(new Label("Rate (amount)"));
+				if (m.rate!=null) {
+					t_rate=new TextField(m.rate.toPlainString(),20);
+				} else {
+					t_rate=new TextField("0.00",20);
+				}
+				top.add(t_rate);
+
+				//row 18
+				top.add(new Label("Priority (0..100)"));
+				t_priority=new TextField(String.valueOf(m.priority),20);
+				top.add(t_priority);
+
+				//row 19
+				top.add(new Label("Status"));
+				c_status=Matter.getStatusList();
+				if (m.status!=null) {
+					c_status.select(m.status);
+				}
+				top.add(c_status);
+
+				//there is also date_closed, but that can't be edited
+
+				//notes
 				center.add(new Label("Notes"));
-				t14 = new TextArea(m.desc,3,40);
-				center.add(t14);
+				t_desc = new TextArea(m.desc,3,40);
+				center.add(t_desc);
 
 				Button bp=null;
 				if (oid==null) {
@@ -128,9 +203,9 @@ public class MatterDialog extends Dialog implements ActionListener {
 				m.mattername=t1.getText();
 				m.type=t2.getText();
 				try {
-				m.date_opened=DateYMD.fromString(t3.getText());
+					m.date_opened=DateYMD.fromString(t_date_opened.getText());
 				} catch (Exception x) {
-					System.out.println("warning: unable to parse "+t3.getText());
+					System.out.println("warning: unable to parse "+t_date_opened.getText());
 				}
 				m.firstname=t4.getText();
 				m.lastname=t5.getText();
@@ -142,11 +217,24 @@ public class MatterDialog extends Dialog implements ActionListener {
 				m.casenum=t11.getText();
 				m.otr_party=t12.getText();
 				m.otr_atty=t13.getText();
-				m.open=cb1.getState();
-				m.desc=t14.getText();
+
+				m.desc=t_desc.getText();
 				//get rid of newline by replacing it with a space
 				m.desc = m.desc.replaceAll("\\r?\\n"," ");
-				//System.out.println(m.desc);
+
+				m.parent=t_parent.getText();
+
+				//budget
+				m.setBudget(t_budget.getText());
+
+				//rate
+				m.setRate(t_rate.getText());
+
+				//priority
+				m.priority=Integer.parseInt(t_priority.getText());
+
+				//status
+				m.status=c_status.getSelectedItem();
 
 				if (cmd.equals("Add")) {
  					try {
@@ -155,7 +243,6 @@ public class MatterDialog extends Dialog implements ActionListener {
 						Key k=tx.insert(m);
 						tx.commit();
 						System.out.println("insert successful, key="+k.id);
-						//status.setText("inserted matter, key="+k);
 					} catch (Exception x) {
 						x.printStackTrace();
 					}
@@ -168,7 +255,6 @@ public class MatterDialog extends Dialog implements ActionListener {
 						tx.update(m);
 						tx.commit();
 						System.out.println("update successful, key="+oid);
-						//status.setText("inserted matter, key="+k);
 					} catch (Exception x) {
 						x.printStackTrace();
 					}

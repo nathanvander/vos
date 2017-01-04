@@ -7,9 +7,10 @@ import java.io.*;
 import apollo.iface.*;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import vos2.reports.*;
 
 public class Vos extends Frame implements ActionListener {
-	public static String version="2.0";
+	public static String version="2.1";
 	DataStore ds;
 	Label status;
 	JEditorPane desktop;
@@ -27,17 +28,7 @@ public class Vos extends Frame implements ActionListener {
 		super("Vos");
 		this.ds=ds;
 
-		//create new tables for activity and matter
-		try {
-		Transaction tx=ds.createTransaction();
-		System.out.println("creating Matter and Activity tables");
-		tx.begin();
-		tx.createTable(new Matter());
-		tx.createTable(new Activity());
-		tx.commit();
-		} catch (Exception x) {
-			System.out.println(x.getMessage());
-		}
+		initDatabase();
 
 		setSize(400, 300);
 		addWindowListener(new Listener());
@@ -120,6 +111,26 @@ public class Vos extends Frame implements ActionListener {
 
 	}
 
+	//create necessary tables and views in the database
+	private void initDatabase() {
+		//create new tables for activity and matter
+		try {
+		Transaction tx=ds.createTransaction();
+		System.out.println("creating Matter and Activity tables");
+		tx.begin();
+		tx.createTable(new Matter());
+		tx.createTable(new Activity());
+
+		//also create Event and Task view
+		//this is the problem with using the word Event
+		tx.createView(new vos2.reports.Event());
+		tx.createView(new Task());
+		tx.commit();
+		} catch (Exception x) {
+			System.out.println(x.getMessage());
+		}
+	}
+
 	public void actionPerformed(ActionEvent e) {
 		String cmd=e.getActionCommand();
 		System.out.println(cmd);
@@ -167,116 +178,40 @@ public class Vos extends Frame implements ActionListener {
 
 	//===================================================
 	public void viewMatters() {
-		//create page
-		StringBuffer sb=new StringBuffer();
-		sb.append(getHeader("View Matters"));
+		ListMatters lm=new ListMatters();
+		//this doesn't use resource or params
+		String response=lm.display(ds,null,null);
 
-		//get a list of all matters
-		try {
-		apollo.iface.Cursor it=ds.selectAll(new Matter());
-		it.open();
-
-		sb.append("<table border=1><tr><th>Key</th><th>MatterName</th></tr>");
-		while (it.hasNext()) {
-			Matter m=(Matter)it.next();
-			sb.append("<tr><td>"+m.getKey()+"</td><td>"+m.mattername+"</td></tr>");
-		}
-		it.close();
-		} catch (Exception x) {
-			System.out.println(x.getMessage());
-		}
-		sb.append("</table>");
 		//display it
-		desktop.setText(sb.toString());
+		desktop.setText(response);
 	}
 
 	public void viewActivities() {
-		//first, get header
-		StringBuffer sb=new StringBuffer();
-
-		try {
-		Matter m=(Matter)ds.get(new Key("Matter",mid));
-
-		sb.append("<html>Matter name: "+m.mattername+"<br>");
-		sb.append("Client name: "+m.firstname+" "+m.lastname+"<br>");
-
-		//get a list of all activities
-		apollo.iface.Cursor it=ds.selectAll(new Activity());
-		it.open();
-
-		sb.append("<table border=1><tr><th>Key</th><th>Activity</th><th>Type</th><th>Date</th><th>Description</th><th>Time</th><th>Complete</th></tr>");
-		//System.out.println("Debug: rs.size()"+rs.size());
-		while (it.hasNext()) {
-			Activity a=(Activity)it.next();
-			if (a.mid.equals(mid)) {
-				sb.append("<tr><td>"+a.getKey()+"</td><td>"+a.name+"</td><td>"+a.type+"</td><td>"+a.date+"</td><td>"+a.desc+"</td><td>"+a.elapsed+"</td><td>"+a.complete+"</td></tr>");
-			}
+		String message=null;
+		if (mid==null) {
+			message="Please select matter first";
+		} else {
+			ListActivities la=new ListActivities();
+			String resource="/vos2.reports.ListActivities/"+mid;
+			message=la.display(ds,resource,null);
 		}
-		it.close();
-		} catch (Exception x) {
-			System.out.println(x.getMessage());
-		}
-		sb.append("</table></html>");
-		//display it
-		desktop.setText(sb.toString());
+		desktop.setText(message);
 	}
 
 	public void eventsReport() {
-		StringBuffer sb=new StringBuffer();
-		sb.append("<html><b>Events</b><br>");
+		EventsReport evr=new EventsReport();
+		//this doesn't use resource or params
+		String response=evr.display(ds,null,null);
 
-		//get a list of all activities
-		try {
-		apollo.iface.Cursor it=ds.selectAll(new Activity());
-		it.open();
-
-		sb.append("<table border=1><tr><th>Key</th><th>Matter</th><th>Date</th><th>Time</th><th>Name</th><th>Details</th></tr>");
-		//System.out.println("Debug: rs.size()"+rs.size());
-		while (it.hasNext()) {
-			Activity a=(Activity)it.next();
-			Matter m=(Matter)ds.get(new Key("Matter",a.mid));
-
-			//System.out.println("Debug: mid"+a.mid);
-			if (a.type.equalsIgnoreCase("EVENT") && a.complete==false) {
-				sb.append("<tr><td>"+a.getKey()+"</td><td>"+m.mattername+"</td><td>"+a.date+"</td><td>"+a.time+"</td><td>"+a.name+"</td><td>"+a.desc+"</td></tr>");
-			}
-		}
-		it.close();
-		} catch (Exception x) {
-			System.out.println(x.getMessage());
-		}
-		sb.append("</table></html>");
 		//display it
-		desktop.setText(sb.toString());
+		desktop.setText(response);
 	}
 
 	public void tasksReport() {
-		StringBuffer sb=new StringBuffer();
-		sb.append("<html><b>Tasks</b><br>");
-
-		try {
-		//get a list of all activities
-		apollo.iface.Cursor it=ds.selectAll(new Activity());
-		it.open();
-
-		sb.append("<table border=1><tr><th>Key</th><th>Matter</th><th>Date</th><th>Name</th><th>Details</th><th>Deadline</th></tr>");
-		//System.out.println("Debug: rs.size()"+rs.size());
-		while (it.hasNext()) {
-			Activity a=(Activity)it.next();
-			Matter m=(Matter)ds.get(new Key("Matter",a.mid));
-			//System.out.println("Debug: mid"+a.mid);
-			if (a.type.equalsIgnoreCase("TASK") && a.complete==false) {
-				sb.append("<tr><td>"+a.getKey()+"</td><td>"+m.mattername+"</td><td>"+a.date+"</td><td>"+a.name+"</td><td>"+a.desc+"</td><td>"+a.deadline+"</td></tr>");
-			}
-		}
-		it.close();
-		} catch (Exception x) {
-			System.out.println(x.getMessage());
-		}
-
-		sb.append("</table></html>");
-		//display it
-		desktop.setText(sb.toString());
+		TasksReport tr=new TasksReport();
+		//this doesn't use resource or params
+		String response=tr.display(ds,null,null);
+		desktop.setText(response);
 	}
 
 	public void about() {
@@ -371,7 +306,15 @@ public class Vos extends Frame implements ActionListener {
 			//System.out.println("populating list");
 			while (it.hasNext()) {
 				Matter m=(Matter)it.next();
-				if (m.open) {
+
+				//System.out.println("DEBUG: matter "+m._key+". status is "+m.status);
+				//open by default
+				boolean open=true;
+				if (m.status!=null && m.status.equals("CLOSED")) {
+					open=false;
+				}
+
+				if (open) {
 					String s=m.getKey()+": "+m.mattername;
 					list.add(s);
 				}
