@@ -4,7 +4,7 @@ import java.awt.event.*;
 import apollo.iface.*;
 import apollo.util.DateYMD;
 /**
-* To create a new Add Matter Dialog, use a zero as the oid
+* To create a new Add Matter Dialog, use a null String as the oid
 */
 public class MatterDialog extends Dialog implements ActionListener {
 			//20 rows
@@ -23,7 +23,7 @@ public class MatterDialog extends Dialog implements ActionListener {
 			TextComponent t11;
 			TextComponent t12;
 			TextComponent t13;	//otr_attry
-			TextArea t_desc;
+			TextComponent t_desc;
 			TextComponent t_parent;
 			TextComponent t_budget;
 			TextComponent t_rate;
@@ -31,12 +31,9 @@ public class MatterDialog extends Dialog implements ActionListener {
 			Choice c_status;
 
 			DataStore ds;
-			long oid;
+			String oid;	 //the oid is a number in base-12, which is the matter id
 
-			//this will be used only if object is changed
-			Matter oldMatter;
-
-			public MatterDialog(Frame f,DataStore ds,long oid) {
+			public MatterDialog(Frame f,DataStore ds,String oid) {
 				super(f,"Matter Dialog");
 				this.ds=ds;
 				this.setSize(350,700);
@@ -56,15 +53,12 @@ public class MatterDialog extends Dialog implements ActionListener {
 
 				//get data
 				Matter m=null;
-				if (oid<1) {
+				if (oid==null) {
 					m=new Matter();
 				} else {
 					try {
 						Key k=new Key("Matter",oid);
 						m=(Matter)ds.get(k);
-						if (m!=null) {
-							oldMatter=m.clone();
-						}
 					} catch (Exception x) {
 						System.out.println("WARNING: unable to get Matter data");
 						//need more detail. What is the problem?
@@ -73,9 +67,9 @@ public class MatterDialog extends Dialog implements ActionListener {
 				}
 
 				//row 0
-				if (oid<0) {
+				if (oid!=null) {
 					top.add(new Label("Key"));
-					l_key=new Label("#"+oid);
+					l_key=new Label(oid);
 					top.add(l_key);
 				}
 
@@ -148,9 +142,9 @@ public class MatterDialog extends Dialog implements ActionListener {
 				top.add(t13);
 
 				//row 14 - notes, moved to the bottom
-				//row 15.  This needs a long
+				//row 15
 				top.add(new Label("Parent"));
-				t_parent=new TextField(String.valueOf(m.parent),20);
+				t_parent=new TextField(m.parent,20);
 				top.add(t_parent);
 
 				//row 16
@@ -188,15 +182,11 @@ public class MatterDialog extends Dialog implements ActionListener {
 
 				//notes
 				center.add(new Label("Notes"));
-				if (m.desc!=null) {
-					t_desc=m.desc;
-				} else {
-					t_desc = new TextArea("",3,40);
-				}
+				t_desc = new TextArea(m.desc,3,40);
 				center.add(t_desc);
 
 				Button bp=null;
-				if (oid<1) {
+				if (oid==null) {
 					bp=new Button("Add");
 				} else {
 					bp=new Button("Update");
@@ -228,19 +218,11 @@ public class MatterDialog extends Dialog implements ActionListener {
 				m.otr_party=t12.getText();
 				m.otr_atty=t13.getText();
 
-				m.desc=t_desc;
-				String sdesc=t_desc.getText();
-				if (sdesc!=null) {
-					//get rid of newline by replacing it with a space
-					m.desc.setText(sdesc.replaceAll("\\r?\\n"," "));
-				}
+				m.desc=t_desc.getText();
+				//get rid of newline by replacing it with a space
+				m.desc = m.desc.replaceAll("\\r?\\n"," ");
 
-				//parent is a long
-				try {
-					m.parent=Long.parseLong(t_parent.getText());
-				} catch (NumberFormatException x) {
-					System.out.println("warning: unable to parse "+t_parent.getText()+" as a long");
-				}
+				m.parent=t_parent.getText();
 
 				//budget
 				m.setBudget(t_budget.getText());
@@ -249,12 +231,7 @@ public class MatterDialog extends Dialog implements ActionListener {
 				m.setRate(t_rate.getText());
 
 				//priority
-				try {
-					m.priority=Integer.parseInt(t_priority.getText());
-				} catch (NumberFormatException x) {
-					System.out.println("warning: unable to parse "+t_priority.getText()+" as an int");
-				}
-
+				m.priority=Integer.parseInt(t_priority.getText());
 
 				//status
 				m.status=c_status.getSelectedItem();
@@ -265,18 +242,17 @@ public class MatterDialog extends Dialog implements ActionListener {
 						tx.begin();
 						Key k=tx.insert(m);
 						tx.commit();
-						System.out.println("insert successful, key="+k.rowid);
+						System.out.println("insert successful, key="+k.id);
 					} catch (Exception x) {
 						x.printStackTrace();
 					}
 				} else if (cmd.equals("Update")) {
 					try {
 						//update this in database
-						//requires old version of object
-						m.rowid=oid;
+						m._key=oid;
 						Transaction tx=ds.createTransaction();
 						tx.begin();
-						tx.update(oldMatter,m);
+						tx.update(m);
 						tx.commit();
 						System.out.println("update successful, key="+oid);
 					} catch (Exception x) {

@@ -20,16 +20,15 @@ import java.util.Date;
 * 	time_entered is used by the time and billing system.
 *
 * The elapsed time is important because it will be used for time and billing
-*
-* Updated 1/22/2017
 */
 public class Activity implements DataObject {
 	//rounds to the nearest 10th of an hour
 	public static DecimalFormat hours=new DecimalFormat("#0.0");
 
 	public long rowid;
-	public long mid;			//the matter id.  This is a foreign key, but not enforced
-								//corresponds to Matter.rowid
+	public String _key;
+	public String mid;			//the matter id.  This is a foreign key, but not enforced
+								//corresponds to Matter._key
 	public String type;			//select type from list
 	public DateYMD date_opened;	//don't edit this, it is just the date entered
 	public String name;   		//short description.  aka title
@@ -43,19 +42,16 @@ public class Activity implements DataObject {
 	public int priority;
 	public String desc;  		//textarea
 	public String status;
-	public boolean time_entered=false; //I think this was meant for a timesheet
-										//entry. ignore for now
+	public boolean time_entered=false;
 
 
 	public String getTableName() {return "Activity";}
 
-	public String[] fields() {return new String[]{"mid","type","date_opened","name","date","time","location","deadline","elapsed","phone","priority","desc","status","time_entered"};}
-
-	public String[] displayNames() {return new String[]{"Matter ID","Type","Date Opened (don't edit)","Name","Date","Time","Location","Deadline","Elapsed Time (tenth of hour)","Phone","Priority","Description","Status","Time Entered"};}
+	public String[] fields() {return new String[]{"mid","type","name","date","time","location","deadline","elapsed","phone","priority","desc","status","time_entered"};}
 
 	public String index() {return "date,time";}
 
-	public long getID() {return rowid;}
+	public String getKey() {return _key;}
 
 
 	//even though this is a double, we want to display it to the nearest 10th of an hour
@@ -100,36 +96,5 @@ public class Activity implements DataObject {
     	list.add("MEMO");			//nothing to do, this is just a note
     	list.add("CANCELLED");
 		return list;
-	}
-
-	public Activity clone() {
-		Activity copy = new Activity();
-
-		copy.rowid=rowid;
-		copy.mid=mid;
-		copy.type = type;
-
-		if (date_opened!=null) {
-			copy.date_opened = date_opened.clone();
-		}
-		copy.name=name;
-		if (date!=null) {
-			copy.date=date.clone();		//format YYYY-MM-DD.  This either the date entered or scheduled
-		}
-
-		copy.time = time;			//format HH:MM, no AM/PM
-		copy.location = location;
-
-		if (deadline!=null) {
-			copy.deadline = deadline.clone(); 	//if a task
-		}
-		copy.elapsed = elapsed;
-		copy.phone = phone;		//if there is a phone call involved
-		copy.priority = priority;
-		copy.desc = desc;  		//textarea
-		copy.status=status;
-		copy.time_entered = time_entered;
-
-		return copy;
 	}
 }
