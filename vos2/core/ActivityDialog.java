@@ -7,7 +7,8 @@ import apollo.util.DateYMD;
 //if this is an Add dialog, then mid should have a value and oid should be null
 //if this is an edit dialog, then mid should be null, and oid should have a value
 public class ActivityDialog extends Dialog implements ActionListener {
-		String mid;  //matter id
+		long mid;  //matter id
+		long oid;  //activity id
 
 		//14 components
 		//you can't edit time_entered
@@ -27,14 +28,16 @@ public class ActivityDialog extends Dialog implements ActionListener {
 		TextComponent t_desc;	//notes
 
 		DataStore ds;
-		String oid;  //activity id
 
-		public ActivityDialog(Window f,DataStore ds,String mid,String oid) {
+		Activity oldActivity;	//used if it changes
+
+		public ActivityDialog(Window f,DataStore ds,long mid,long oid) {
 			super(f,"Activity Dialog");
 			this.ds=ds;
 			this.setSize(350,500);
 			this.mid=mid;
 			this.oid=oid;
+
 			addWindowListener(new DialogListener(this));
 			setLayout(new BorderLayout());
 
@@ -49,30 +52,38 @@ public class ActivityDialog extends Dialog implements ActionListener {
 
 			//retrieve Activity
 			Activity a=null;
-			if (oid==null) {
+			if (oid<1) {
 				a=new Activity();
 				a.mid=mid;
+				if (mid<1) {
+					System.out.println("WARNING: Matter ID is "+mid);
+				}
 			} else {
 				Key k=new Key("Activity",oid);
 				try {
-				a=(Activity)ds.get(k);
-				this.mid=a.mid;  //this.mid might be null before this
+					a=(Activity)ds.get(k);
+					this.mid=a.mid;  //this.mid might be null before this
+					if (a!=null) {
+						oldActivity=a.clone();
+					}
 				} catch (Exception x) {
 					System.out.println("WARNING: unable to get Activity data");
 				}
 			}
 
 			//row 0
-			if (oid!=null) {
-				top.add(new Label("Key"));
-				l_key=new Label(oid);
+			//oid can never be edited. It will be either 0 or the current oid, if being edited
+			if (oid>0) {
+				top.add(new Label("Activity #"));
+				l_key=new Label("#"+oid);
 				top.add(l_key);
 			}
 
 			//row 1
-			//matterid
+			//matterid should never be edited.  It should always have a valid
+			//value, either being passed in, or retrieved
 			top.add(new Label("Matter #"));
-			l_mid=new Label(a.mid);
+			l_mid=new Label("#"+a.mid);
 			top.add(l_mid);
 
 			//type
@@ -83,7 +94,7 @@ public class ActivityDialog extends Dialog implements ActionListener {
 
 			//only allow editing date_opened on initial dialog
 			//date_opened
-			if (oid==null) {
+			if (oid<1) {
 				top.add(new Label("Date Opened (YYYY-MM-DD))"));
 				if (a.date_opened==null) {
 					a.date_opened=new DateYMD();
@@ -160,7 +171,7 @@ public class ActivityDialog extends Dialog implements ActionListener {
 			center.add(t_desc);
 
 			Button bp=null;
-			if (oid==null) {
+			if (oid<1) {
 				bp=new Button("Add");
 			} else {
 				bp=new Button("Update");
@@ -205,17 +216,17 @@ public class ActivityDialog extends Dialog implements ActionListener {
 					tx.begin();
 					Key k=tx.insert(a);
 					tx.commit();
-					System.out.println("insert successful, key="+k.id);
+					System.out.println("insert successful, key="+k.rowid);
 				} catch (Exception x) {
 					x.printStackTrace();
 				}
 			} else if (cmd.equals("Update")) {
 				try {
-					a._key=oid;
+					a.rowid=oid;
 					//a.mid is already set
 					Transaction tx=ds.createTransaction();
 					tx.begin();
-					tx.update(a);
+					tx.update(oldActivity,a);
 					tx.commit();
 					System.out.println("update successful, key="+oid);
 				} catch (Exception x) {

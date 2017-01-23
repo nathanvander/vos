@@ -24,7 +24,7 @@ public class EventsReport implements WebObject {
 
 			while (it.hasNext()) {
 				Event ev=(Event)it.next();
-				sb.append("<tr><td>"+ev._key+"</td><td>"+ev.mattername+"</td><td>"+ev.date+"</td><td>"+ev.time+"</td><td>"+ev.location+"</td><td>"+ev.name+"</td><td>"+ev.desc+"</td></tr>\r\n");
+				sb.append("<tr><td>"+ev.eventid+"</td><td>"+ev.mattername+"</td><td>"+ev.date+"</td><td>"+ev.time+"</td><td>"+ev.location+"</td><td>"+ev.name+"</td><td>"+ev.desc+"</td></tr>\r\n");
 			}
 			it.close();
 			sb.append("</table></html>");

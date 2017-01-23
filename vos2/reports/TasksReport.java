@@ -23,7 +23,7 @@ public class TasksReport implements WebObject {
 
 			while (it.hasNext()) {
 				Task t=(Task)it.next();
-				sb.append("<tr><td>"+t._key+"</td><td>"+t.mattername+"</td><td>"+t.priority+"</td><td>"+t.date+"</td><td>"+t.name+"</td><td>"+t.deadline+"</td><td>"+t.deadline+"</td></tr>\r\n");
+				sb.append("<tr><td>"+t.taskid+"</td><td>"+t.mattername+"</td><td>"+t.priority+"</td><td>"+t.date+"</td><td>"+t.name+"</td><td>"+t.deadline+"</td><td>"+t.deadline+"</td></tr>\r\n");
 			}
 
 			it.close();

@@ -1,5 +1,6 @@
 package vos2.reports;
 import apollo.iface.ViewObject;
+import apollo.iface.DataObject;
 import apollo.util.DateYMD;
 
 /**
@@ -11,8 +12,8 @@ import apollo.util.DateYMD;
 */
 public class Task implements ViewObject {
 
-	public String _key;			//from Activity
-	public String mid;
+	public long taskid;			//from Activity
+	public long mid;
 	public String mattername;	//from Matter
 	public int priority;
 	public DateYMD date;		//the date is when we expect to work on it.  Not the date it was opened
@@ -23,10 +24,10 @@ public class Task implements ViewObject {
 
 	//this is used only to create the view
 	public String getSQL() {
-		StringBuffer sb=new StringBuffer("SELECT a._key AS _key, a.mid AS mid, m.mattername AS mattername, a.priority AS priority, a.date AS date, ");
+		StringBuffer sb=new StringBuffer("SELECT a.rowid AS taskid, a.mid AS mid, m.mattername AS mattername, a.priority AS priority, a.date AS date, ");
 		sb.append("a.name AS name, a.deadline AS deadline, a.desc AS desc ");
 		sb.append("FROM Activity a,Matter m ");
-		sb.append("WHERE a.mid=m._key ");
+		sb.append("WHERE a.mid=m.rowid ");
 		sb.append("AND a.type='TASK' ");
 		sb.append("AND a.status='OPEN' ");
 		return sb.toString();
@@ -37,10 +38,14 @@ public class Task implements ViewObject {
 	*/
 	public String getViewName() {return "Task";}
 
-	public String[] fields() {return new String[]{"_key","mid","mattername","priority","date","name","deadline","desc"};}
+	public String[] fields() {return new String[]{"taskid","mid","mattername","priority","date","name","deadline","desc"};}
+
+	public String[] displayNames() {return null;}
 
 	//these fields are not used.  this is to simplify Cursor.next()
 	public String getTableName() {return "Task";}
 	public String index() {return null;}
-	public String getKey() {return null;}
+	public long getID() {return 0;}
+
+	public DataObject clone() {return null;}
 }
