@@ -19,13 +19,19 @@ public class ListActivities implements WebObject {
 			return "expecting resource with the format /vos2.reports.ListActivities/mid";
 		}
 		String[] part=resource.split("/");
-		//part 0 is empty, since this because with a string
+		//part 0 is empty
 		//part 1 is the class name
-		String mid=null;
+		long mid=0;
 		if (part.length>2) {
-			mid=part[2];
-			if (mid==null || mid.length()==0) {
+			String smid=part[2];
+			if (smid==null || smid.length()==0) {
 				return "expecting resource with the format /vos2.reports.ListActivities/mid";
+			} else {
+				try {
+					mid=Long.parseLong(smid);
+				} catch (Exception x) {
+					return "expecting mid to be a number, unless it is "+smid;
+				}
 			}
 		} else {
 			return "expecting resource with the format /vos2.reports.ListActivities/mid";
@@ -41,7 +47,7 @@ public class ListActivities implements WebObject {
 			sb.append("Client name: "+m.firstname+" "+m.lastname+"<br>");
 
 			//get a list of all activities matching the where clause
-			String where="WHERE mid='"+mid+"' ORDER BY date,time";
+			String where="WHERE mid="+mid+" ORDER BY date,time";
 			Cursor it=ds.selectWhere(new Activity(),where);
 			it.open();
 
@@ -49,7 +55,7 @@ public class ListActivities implements WebObject {
 
 			while (it.hasNext()) {
 				Activity a=(Activity)it.next();
-				sb.append("<tr><td>"+a.getKey()+"</td><td>"+a.name+"</td><td>"+a.type+"</td><td>"+a.date+"</td><td>"+a.desc+"</td><td>"+a.elapsed+"</td><td>"+a.priority+"</td><td>"+a.status+"</td></tr>\r\n");
+				sb.append("<tr><td>"+a.getID()+"</td><td>"+a.name+"</td><td>"+a.type+"</td><td>"+a.date+"</td><td>"+a.desc+"</td><td>"+a.elapsed+"</td><td>"+a.priority+"</td><td>"+a.status+"</td></tr>\r\n");
 			}
 
 			it.close();

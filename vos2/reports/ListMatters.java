@@ -25,7 +25,7 @@ public class ListMatters implements WebObject {
 			sb.append("<table border=1><tr><th>Key</th><th>Matter Name</th><th>Priority</th><th>Status</th></tr>\r\n");
 			while (it.hasNext()) {
 				Matter m=(Matter)it.next();
-				sb.append("<tr><td>"+m.getKey()+"</td><td>"+m.mattername+"</td><td>"+m.priority+"</td><td>"+m.status+"</td></tr>\r\n");
+				sb.append("<tr><td>"+m.getID()+"</td><td>"+m.mattername+"</td><td>"+m.priority+"</td><td>"+m.status+"</td></tr>\r\n");
 			}
 			it.close();
 			sb.append("</table>");

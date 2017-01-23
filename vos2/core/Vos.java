@@ -9,17 +9,25 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import vos2.reports.*;
 
+/**
+* Minor update 1/22/2017 to use the changed Apollo core.  This is now version 2.20.
+*/
+
 public class Vos extends Frame implements ActionListener {
-	public static String version="2.1";
+	public final static float VERSION = 2.20F;
+
 	DataStore ds;
 	Label status;
 	JEditorPane desktop;
-	String mid=null;  //matterid
+	long mid;  //matterid
 
 	//---------------------------
-	//subroutines
+	public static String getVersion() {
+		return String.format("%.2f", VERSION);
+	}
+
 	public static String getHeader(String title) {
-		return "<head><title>"+title+"</title><meta name=\"app\" content=\"VOS ver. "+version+"\"></head>";
+		return "<head><title>"+title+"</title><meta name=\"app\" content=\"VOS ver. "+getVersion()+"\"></head>";
 	}
 
 	//--------------------------
@@ -135,29 +143,29 @@ public class Vos extends Frame implements ActionListener {
 		String cmd=e.getActionCommand();
 		System.out.println(cmd);
 		if (cmd.equals("Add Matter")) {
-			new MatterDialog(this,ds,null);
+			new MatterDialog(this,ds,0);
 		} else if (cmd.equals("View Matters")) {
 			viewMatters();
 		} else if (cmd.equals("Select Matter")) {
 			new SelectMatterDialog(this);
 		} else if (cmd.equals("Edit Matter")) {
-			if (mid!=null) {
+			if (mid>0) {
 				new MatterDialog(this,ds,mid);
 			}
 		} else if (cmd.equals("Delete Matter")) {
-			if (mid!=null) {
+			if (mid>0) {
 				new DeleteMatterDialog(this,ds,mid);
 			}
 		} else if (cmd.equals("Add Activity")) {
-			if (mid!=null) {
-				new ActivityDialog(this,ds,mid,null);
+			if (mid>0) {
+				new ActivityDialog(this,ds,mid,0);
 			}
 		} else if (cmd.equals("View Activities")) {
-			if (mid!=null) {
+			if (mid>0) {
 				viewActivities();
 			}
 		} else if (cmd.equals("Edit Activity")) {
-			if (mid!=null) {
+			if (mid>0) {
 				new SelectActivityDialog(this,ds,mid);
 			}
 		} else if (cmd.equals("Events")) {
@@ -172,7 +180,7 @@ public class Vos extends Frame implements ActionListener {
 	}
 
 	//get matter id, might be null
-	public String getMid() {
+	public long getMid() {
 		return mid;
 	}
 
@@ -188,7 +196,7 @@ public class Vos extends Frame implements ActionListener {
 
 	public void viewActivities() {
 		String message=null;
-		if (mid==null) {
+		if (mid<1) {
 			message="Please select matter first";
 		} else {
 			ListActivities la=new ListActivities();
@@ -216,7 +224,7 @@ public class Vos extends Frame implements ActionListener {
 
 	public void about() {
 		StringBuffer sb=new StringBuffer();
-		sb.append("<html><table border=1><tr><th>VOS ver. "+version+"<br>Copyright 2016 Nathan Vanderhoofven</th></tr></table></html>");
+		sb.append("<html><table border=1><tr><th>VOS ver. "+getVersion()+"<br>Copyright 2017 Nathan Vanderhoofven</th></tr></table></html>");
 		desktop.setText(sb.toString());
 	}
 
@@ -291,7 +299,7 @@ public class Vos extends Frame implements ActionListener {
 					String[] sa=selected.split(":");
 					//int i=Integer.parseInt(sa[0]);
 					status.setText(selected);
-					mid=sa[0];
+					mid=Long.parseLong(sa[0]);
 				}
 			}
 			this.dispose();
@@ -315,7 +323,7 @@ public class Vos extends Frame implements ActionListener {
 				}
 
 				if (open) {
-					String s=m.getKey()+": "+m.mattername;
+					String s=m.getID()+": "+m.mattername;
 					list.add(s);
 				}
 			}
@@ -330,11 +338,11 @@ public class Vos extends Frame implements ActionListener {
 	//------------------------------------------------
 	class DeleteMatterDialog extends Dialog implements ActionListener {
 		DataStore ds;
-		String oid;
+		long mid;
 
-		public DeleteMatterDialog(Frame f,DataStore ds,String oid) {
+		public DeleteMatterDialog(Frame f,DataStore ds,long mid) {
 			super(f,"Delete Matter Dialog");
-			this.oid=oid;
+			this.mid=mid;
 			this.ds=ds;
 
 			this.setSize(250,150);
@@ -345,7 +353,7 @@ public class Vos extends Frame implements ActionListener {
 			add(top,BorderLayout.NORTH);
 
 			top.add(new Label("Are you sure you want to delete this?"));
-			top.add(new Label("Record# "+oid));
+			top.add(new Label("Record# "+mid));
 
 			Panel south=new Panel(new FlowLayout());
 			add(south,BorderLayout.SOUTH);
@@ -365,10 +373,16 @@ public class Vos extends Frame implements ActionListener {
 			if (cmd.equals("Yes")) {
 				//delete from database
 				try {
-					Transaction tx=ds.createTransaction();
-					tx.begin();
-					tx.delete(new Key("Matter",oid));
-					tx.commit();
+					//first, retrieve it
+					//this is so it can be audited
+					Matter m = (Matter)ds.get(new Key("Matter",mid));
+
+					if (m!=null) {
+						Transaction tx=ds.createTransaction();
+						tx.begin();
+						tx.delete(m);
+						tx.commit();
+					}
 				} catch (Exception x) {
 					x.printStackTrace();
 				}
@@ -387,13 +401,13 @@ public class Vos extends Frame implements ActionListener {
 	class SelectActivityDialog extends Dialog implements ActionListener {
 		List list;
 		DataStore ds;
-		String matterId;
+		long mid;
 
-		public SelectActivityDialog(Frame f,DataStore ds,String mid) {
+		public SelectActivityDialog(Frame f,DataStore ds,long mid) {
 			super(f,"Select Activity Dialog");
 			this.setSize(350,300);
 			this.ds=ds;
-			this.matterId=mid;
+			this.mid=mid;
 
 			addWindowListener(new DialogListener(this));
 			setLayout(new BorderLayout());
@@ -422,9 +436,9 @@ public class Vos extends Frame implements ActionListener {
 			if (cmd.equals("Select")) {
 				if (selected!=null) {
 					String[] sa=selected.split(":");
-					String oid=sa[0];
-					//int oid=Integer.parseInt(sa[0]);
-					new ActivityDialog(getOwner(),ds,matterId,oid);
+					//String oid=sa[0];
+					long oid=Long.parseLong(sa[0]);
+					new ActivityDialog(getOwner(),ds,mid,oid);
 				}
 			}
 			this.dispose();
@@ -432,17 +446,16 @@ public class Vos extends Frame implements ActionListener {
 
 		private void populateList() {
 		try {
-			//get list of activities
-			apollo.iface.Cursor it=ds.selectAll(new Activity());
+
+			//get a list of all activities matching the where clause
+			String where="WHERE mid="+mid+" ORDER BY date,time";
+			apollo.iface.Cursor it=ds.selectWhere(new Activity(),where);
 			it.open();
 
 			while (it.hasNext()) {
 				Activity a=(Activity)it.next();
-				//System.out.println("Debug: mid"+a.mid);
-				if (a.mid.equals(matterId)) {
-					String s=a.getKey()+": "+a.name;
-					list.add(s);
-				}
+				String s=a.getID()+": "+a.name;
+				list.add(s);
 			}
 			it.close();
 		} catch (Exception x) {
