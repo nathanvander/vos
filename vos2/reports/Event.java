@@ -35,6 +35,7 @@ public class Event implements ViewObject {
 		sb.append("WHERE a.mid=m.rowid ");
 		sb.append("AND a.type='EVENT' ");
 		sb.append("AND a.status='OPEN' ");
+		sb.append("ORDER BY date, time");
 		return sb.toString();
 	}
 
